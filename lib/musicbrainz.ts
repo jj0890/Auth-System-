@@ -47,8 +47,10 @@ export interface AlbumResult {
 }
 
 export async function searchAlbums(query: string): Promise<AlbumResult[]> {
+  // Wrap in quotes for exact phrase matching on the release title field.
+  // Users can type "Blonde Frank Ocean" — MusicBrainz will match on any field.
   const params = new URLSearchParams({
-    query: `release:${query}`,
+    query: `"${query}"`,
     fmt: "json",
     limit: "10",
   });

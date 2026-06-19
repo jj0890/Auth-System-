@@ -15,7 +15,8 @@ export async function GET() {
     return Response.json({ error: "Rate limit exceeded" }, { status: 429, headers: limit.headers });
   }
 
-  const { data, error } = await supabase
+  const admin = getAdminClient();
+  const { data, error } = await admin
     .from("profiles")
     .select("*")
     .eq("clerk_id", userId)
@@ -66,9 +67,9 @@ export async function PATCH(req: Request) {
   // Validate handle format if provided
   if (update.handle !== undefined) {
     const handle = String(update.handle);
-    if (!/^[a-z0-9_]{3,30}$/.test(handle)) {
+    if (!/^[a-z0-9-]{2,30}$/.test(handle)) {
       return Response.json(
-        { error: "Handle must be 3–30 lowercase letters, numbers, or underscores" },
+        { error: "Handle must be 2–30 lowercase letters, numbers, or hyphens" },
         { status: 422 }
       );
     }
@@ -95,8 +96,8 @@ export async function PATCH(req: Request) {
     }
   }
 
-  // RLS ensures users can only update their own row
-  const { data, error } = await supabase
+  const admin = getAdminClient();
+  const { data, error } = await admin
     .from("profiles")
     .update(update)
     .eq("clerk_id", userId)

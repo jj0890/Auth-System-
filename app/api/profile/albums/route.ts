@@ -1,65 +1,46 @@
 import { auth } from "@clerk/nextjs/server";
-import { supabase } from "@/lib/supabase";
+import { getAdminClient } from "@/lib/supabase";
 import { checkApiLimit } from "@/lib/ratelimit";
 
-// ── GET /api/profile/albums ───────────────────────────────────────────────────
-// Returns the authenticated user's album picks (all 5 slots).
 export async function GET() {
   const { userId } = await auth();
-  if (!userId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data, error } = await supabase
+  const admin = getAdminClient();
+  const { data, error } = await admin
     .from("profile_albums")
     .select("*")
     .eq("clerk_id", userId)
     .order("rank");
 
-  if (error) {
-    return Response.json({ error: "Failed to fetch albums" }, { status: 500 });
-  }
-
+  if (error) return Response.json({ error: "Failed to fetch albums" }, { status: 500 });
   return Response.json(data);
 }
 
-// ── PUT /api/profile/albums ───────────────────────────────────────────────────
-// Upserts one album slot. Body: { rank, mb_id, title, artist, year, cover_url }
 export async function PUT(req: Request) {
   const { userId } = await auth();
-  if (!userId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const limit = await checkApiLimit(userId);
-  if (!limit.ok) {
-    return Response.json({ error: "Rate limit exceeded" }, { status: 429 });
-  }
+  if (!limit.ok) return Response.json({ error: "Rate limit exceeded" }, { status: 429 });
 
   let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  try { body = await req.json(); }
+  catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
 
   const { rank, mb_id, title, artist, year, cover_url } = body;
 
-  // Validate
-  if (typeof rank !== "number" || rank < 1 || rank > 5) {
+  if (typeof rank !== "number" || rank < 1 || rank > 5)
     return Response.json({ error: "rank must be 1–5" }, { status: 422 });
-  }
-  if (!mb_id || typeof mb_id !== "string") {
+  if (!mb_id || typeof mb_id !== "string")
     return Response.json({ error: "mb_id is required" }, { status: 422 });
-  }
-  if (!title || typeof title !== "string") {
+  if (!title || typeof title !== "string")
     return Response.json({ error: "title is required" }, { status: 422 });
-  }
-  if (!artist || typeof artist !== "string") {
+  if (!artist || typeof artist !== "string")
     return Response.json({ error: "artist is required" }, { status: 422 });
-  }
 
-  const { data, error } = await supabase
+  const admin = getAdminClient();
+  const { data, error } = await admin
     .from("profile_albums")
     .upsert(
       {
@@ -80,33 +61,24 @@ export async function PUT(req: Request) {
     console.error("Album upsert error:", error);
     return Response.json({ error: "Failed to save album" }, { status: 500 });
   }
-
   return Response.json(data);
 }
 
-// ── DELETE /api/profile/albums?rank=N ────────────────────────────────────────
-// Removes one album slot.
 export async function DELETE(req: Request) {
   const { userId } = await auth();
-  if (!userId) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
   const rank = Number(new URL(req.url).searchParams.get("rank"));
-
-  if (!rank || rank < 1 || rank > 5) {
+  if (!rank || rank < 1 || rank > 5)
     return Response.json({ error: "rank query param must be 1–5" }, { status: 422 });
-  }
 
-  const { error } = await supabase
+  const admin = getAdminClient();
+  const { error } = await admin
     .from("profile_albums")
     .delete()
     .eq("clerk_id", userId)
     .eq("rank", rank);
 
-  if (error) {
-    return Response.json({ error: "Failed to delete album" }, { status: 500 });
-  }
-
+  if (error) return Response.json({ error: "Failed to delete album" }, { status: 500 });
   return Response.json({ deleted: true });
 }

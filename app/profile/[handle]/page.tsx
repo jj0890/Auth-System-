@@ -1,12 +1,20 @@
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { Metadata } from "next";
 
 interface Props {
   params: { handle: string };
 }
 
-// Generate OG metadata from the profile
+const CONTENT_TYPE_COLORS: Record<string, string> = {
+  Article: "bg-ink text-paper",
+  Mix: "bg-stone-700 text-paper",
+  Interview: "bg-stone-500 text-paper",
+  Feature: "bg-stone-400 text-ink",
+  "Photo essay": "bg-card text-ink",
+};
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { data } = await supabase
     .from("profiles")
@@ -18,16 +26,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return { title: "Profile not found" };
 
   return {
-    title: `${data.display_name} — ${process.env.NEXT_PUBLIC_SITE_NAME}`,
+    title: `${data.display_name} — The Edit`,
     description: data.bio ?? undefined,
-    openGraph: {
-      images: data.avatar_url ? [data.avatar_url] : [],
-    },
+    openGraph: { images: data.avatar_url ? [data.avatar_url] : [] },
   };
 }
 
 export default async function ProfilePage({ params }: Props) {
-  // Fetch profile (RLS: only returns is_public = true)
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
@@ -37,7 +42,6 @@ export default async function ProfilePage({ params }: Props) {
 
   if (!profile) notFound();
 
-  // Fetch albums and approved contributions in parallel
   const [{ data: albums }, { data: contributions }] = await Promise.all([
     supabase
       .from("profile_albums")
@@ -52,75 +56,171 @@ export default async function ProfilePage({ params }: Props) {
       .order("created_at", { ascending: false }),
   ]);
 
-  return (
-    <main style={{ maxWidth: 680, margin: "0 auto", padding: "2rem 1rem" }}>
-      <section aria-label="Profile header">
-        {profile.avatar_url && (
-          <img
-            src={profile.avatar_url}
-            alt={`${profile.display_name} profile photo`}
-            width={80}
-            height={80}
-            style={{ borderRadius: "50%", objectFit: "cover" }}
-          />
-        )}
-        <h1>{profile.display_name}</h1>
-        {profile.role_label && <p>{profile.role_label}</p>}
-        {profile.bio && <p>{profile.bio}</p>}
+  const contributionCount = contributions?.length ?? 0;
 
-        {Array.isArray(profile.links) && profile.links.length > 0 && (
-          <ul aria-label="Links">
-            {profile.links.map((link: { label: string; url: string }, i: number) => (
-              <li key={i}>
-                <a href={link.url} target="_blank" rel="noopener noreferrer">
+  return (
+    <div className="min-h-screen bg-paper">
+      {/* Site header */}
+      <header className="border-b border-rule px-6 py-4 flex items-center justify-between">
+        <Link
+          href="/"
+          className="text-2xl tracking-[0.12em] uppercase"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          The Edit
+        </Link>
+        <Link href="/sign-in" className="label hover:text-ink transition-colors">
+          Sign in
+        </Link>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-6 py-12">
+        {/* Profile card */}
+        <section className="flex gap-8 items-start mb-12 pb-12 border-b border-rule">
+          {/* Avatar */}
+          <div className="shrink-0">
+            {profile.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={`${profile.display_name} photo`}
+                className="w-24 h-24 object-cover grayscale"
+              />
+            ) : (
+              <div className="w-24 h-24 bg-card border border-rule flex items-center justify-center">
+                <span className="label">{profile.display_name?.[0] ?? "?"}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <p className="label mb-1">{profile.role_label ?? "Contributor"}</p>
+            <h1
+              className="text-3xl font-normal mb-3"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {profile.display_name}
+            </h1>
+            {profile.bio && (
+              <p className="text-sm text-muted leading-relaxed mb-4 max-w-prose">
+                {profile.bio}
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-5">
+              <span className="label">{contributionCount} contribution{contributionCount !== 1 ? "s" : ""}</span>
+
+              {Array.isArray(profile.links) && profile.links.map((link: { label: string; url: string }, i: number) => (
+                <a
+                  key={i}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="label underline underline-offset-2 hover:text-ink transition-colors"
+                >
                   {link.label}
                 </a>
-              </li>
-            ))}
-          </ul>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Top 5 Albums — Letterboxd-style horizontal strip */}
+        {albums && albums.length > 0 && (
+          <section className="mb-14">
+            <div className="flex items-baseline gap-4 mb-5">
+              <h2
+                className="text-xl font-normal"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Taste
+              </h2>
+              <span className="label">Top 5 albums</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {albums.map((album) => (
+                <div key={album.id} className="group">
+                  <div className="aspect-square bg-card border border-rule overflow-hidden mb-2">
+                    {album.cover_url ? (
+                      <img
+                        src={album.cover_url}
+                        alt={`${album.title} by ${album.artist}`}
+                        className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center">
+                        <span className="text-muted text-[10px] leading-tight">{album.title}</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-[11px] font-medium leading-tight truncate">{album.title}</p>
+                  <p className="text-[10px] text-muted truncate">{album.artist}</p>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
-      </section>
 
-      {albums && albums.length > 0 && (
-        <section aria-label="Favourite albums">
-          <h2>Taste</h2>
-          <ol>
-            {albums.map((album) => (
-              <li key={album.id}>
-                {album.cover_url && (
-                  <img
-                    src={album.cover_url}
-                    alt={`${album.title} album art`}
-                    width={60}
-                    height={60}
-                  />
-                )}
-                <span>{album.title}</span> — <span>{album.artist}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+        {/* Contributions — NTS-style grid */}
+        {contributions && contributions.length > 0 && (
+          <section>
+            <div className="flex items-baseline gap-4 mb-5">
+              <h2
+                className="text-xl font-normal"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                Work
+              </h2>
+              <span className="label">{contributionCount} piece{contributionCount !== 1 ? "s" : ""}</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-px bg-rule">
+              {contributions.map((c) => (
+                <div key={c.id} className="bg-paper p-5 flex flex-col gap-3">
+                  <span
+                    className={`label inline-block self-start px-2 py-0.5 ${CONTENT_TYPE_COLORS[c.type] ?? "bg-card text-ink"}`}
+                  >
+                    {c.type}
+                  </span>
+                  {c.url ? (
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium leading-snug hover:underline underline-offset-2"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      {c.title}
+                    </a>
+                  ) : (
+                    <span
+                      className="text-sm font-medium leading-snug"
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      {c.title}
+                    </span>
+                  )}
+                  {c.published_at && (
+                    <span className="label mt-auto">
+                      {new Date(c.published_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
-      {contributions && contributions.length > 0 && (
-        <section aria-label="Contributions">
-          <h2>Work</h2>
-          <ul>
-            {contributions.map((c) => (
-              <li key={c.id}>
-                <span>{c.type}</span>
-                {c.url ? (
-                  <a href={c.url} target="_blank" rel="noopener noreferrer">
-                    {c.title}
-                  </a>
-                ) : (
-                  <span>{c.title}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </main>
+        {contributions?.length === 0 && albums?.length === 0 && (
+          <p className="text-muted text-sm text-center py-16">Nothing here yet.</p>
+        )}
+      </main>
+
+      <footer className="border-t border-rule px-6 py-5 mt-16">
+        <span className="label">The Edit</span>
+      </footer>
+    </div>
   );
 }
