@@ -5,14 +5,16 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
-      "style-src 'self' 'unsafe-inline'",
-      // Allow avatars from Supabase Storage + album art from Cover Art Archive
-      "img-src 'self' data: blob: https://*.supabase.co https://coverartarchive.org https://archive.org",
-      "font-src 'self'",
-      // API connections: Supabase, Clerk, MusicBrainz (proxied server-side, but listed for completeness)
-      "connect-src 'self' https://*.supabase.co https://api.clerk.com https://*.clerk.accounts.dev wss://*.supabase.co",
-      "frame-src https://challenges.cloudflare.com",
+      // Clerk JS is loaded from their CDN; unsafe-eval needed by Next.js dev HMR
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      // Allow avatars from Supabase Storage + album art from Cover Art Archive + Google Fonts + Wikipedia
+      "img-src 'self' data: blob: https://*.supabase.co https://coverartarchive.org https://archive.org https://media.ntslive.co.uk https://upload.wikimedia.org",
+      "font-src 'self' https://fonts.gstatic.com",
+      // API connections: Supabase, Clerk, MusicBrainz (proxied server-side)
+      "connect-src 'self' https://*.supabase.co https://api.clerk.com https://*.clerk.accounts.dev wss://*.supabase.co wss://localhost:*",
+      "frame-src https://challenges.cloudflare.com https://*.clerk.accounts.dev",
+      "worker-src 'self' blob:",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
