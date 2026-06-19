@@ -34,7 +34,7 @@ export default function SignInPage() {
         <p className="label mb-6">Welcome back</p>
         <SignIn
           path="/sign-in"
-          fallbackRedirectUrl="/profile"
+          forceRedirectUrl="/profile"
           signUpUrl="/sign-up"
           appearance={{
             elements: {

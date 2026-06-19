@@ -9,7 +9,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://challenges.cloudflare.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       // Allow avatars from Supabase Storage + album art from Cover Art Archive + Google Fonts + Wikipedia
-      "img-src 'self' data: blob: https://*.supabase.co https://coverartarchive.org https://archive.org https://media.ntslive.co.uk https://upload.wikimedia.org",
+      "img-src 'self' data: blob: https://*.supabase.co https://coverartarchive.org https://archive.org https://media.ntslive.co.uk https://upload.wikimedia.org https://img.clerk.com https://*.googleusercontent.com https://lh3.googleusercontent.com",
       "font-src 'self' https://fonts.gstatic.com",
       // API connections: Supabase, Clerk, MusicBrainz (proxied server-side)
       "connect-src 'self' https://*.supabase.co https://api.clerk.com https://*.clerk.accounts.dev wss://*.supabase.co wss://localhost:*",
