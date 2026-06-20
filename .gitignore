@@ -23,3 +23,7 @@ npm-debug.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# MCP tool artifacts
+.playwright-mcp/
+.firecrawl/
