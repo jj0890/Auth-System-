@@ -79,7 +79,11 @@ export default function ContributorGrid({ profiles }: { profiles: Profile[] }) {
 
       {/* Grid */}
       {filtered.length === 0 ? (
-        <p className="text-muted text-sm text-center py-24">No contributors found.</p>
+        <p className="text-muted text-sm text-center py-24">
+          {profiles.length === 0
+            ? "No contributors yet — be the first."
+            : "No contributors match that filter."}
+        </p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-px bg-rule">
           {filtered.map((profile) => (

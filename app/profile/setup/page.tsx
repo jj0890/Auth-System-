@@ -66,6 +66,7 @@ export default function ProfileSetup() {
   }
 
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -203,7 +204,8 @@ export default function ProfileSetup() {
         const { error: msg } = await res.json().catch(() => ({}));
         throw new Error(msg ?? "Something went wrong.");
       }
-      router.push(`/profile/${form.handle}`);
+      setSaved(true);
+      setTimeout(() => router.push(`/profile/${form.handle}`), 1200);
     } catch (err: any) {
       setError(err.message);
       setSaving(false);
@@ -214,6 +216,11 @@ export default function ProfileSetup() {
 
   return (
     <div className="min-h-screen bg-paper flex flex-col">
+      {saved && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-ink text-paper px-6 py-3 label tracking-widest">
+          Profile saved ✓
+        </div>
+      )}
       <header className="border-b border-rule px-6 py-4 flex items-center justify-between">
         <Link href="/" className="text-2xl tracking-[0.12em] uppercase" style={{ fontFamily: "var(--font-display)" }}>
           The Edit

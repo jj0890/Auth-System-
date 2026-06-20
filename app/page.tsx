@@ -3,6 +3,16 @@ import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
 import ContributorGrid from "./components/ContributorGrid";
 
+async function getMyHandle(userId: string | null): Promise<string | null> {
+  if (!userId) return null;
+  const { data } = await supabase
+    .from("profiles")
+    .select("handle")
+    .eq("clerk_id", userId)
+    .single();
+  return data?.handle ?? null;
+}
+
 async function getContributors() {
   const [{ data: profiles }, { data: albums }] = await Promise.all([
     supabase
@@ -26,7 +36,10 @@ async function getContributors() {
 
 export default async function Home() {
   const { userId } = await auth();
-  const contributors = await getContributors();
+  const [contributors, myHandle] = await Promise.all([
+    getContributors(),
+    getMyHandle(userId),
+  ]);
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -41,7 +54,10 @@ export default async function Home() {
         </h1>
         <nav className="flex gap-5">
           {userId ? (
-            <Link href="/profile/setup" className="label hover:text-ink transition-colors">
+            <Link
+              href={myHandle ? `/profile/${myHandle}` : "/profile/setup"}
+              className="label hover:text-ink transition-colors"
+            >
               My profile
             </Link>
           ) : (
