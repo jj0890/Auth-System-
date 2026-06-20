@@ -188,7 +188,7 @@ export default async function ProfilePage({ params }: Props) {
         </section>
 
         {/* Contributions — NTS-style grid */}
-        {contributions && contributions.length > 0 && (
+        {(contributions && contributions.length > 0 || isOwner) && (
           <section>
             <div className="flex items-baseline gap-4 mb-5">
               <h2
@@ -198,6 +198,11 @@ export default async function ProfilePage({ params }: Props) {
                 Work
               </h2>
               <span className="label">{contributionCount} piece{contributionCount !== 1 ? "s" : ""}</span>
+              {isOwner && (
+                <Link href="/profile/contributions" className="label text-muted underline underline-offset-2 hover:text-ink transition-colors ml-auto">
+                  {contributionCount > 0 ? "Edit" : "Add work"}
+                </Link>
+              )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-px bg-rule">
               {contributions.map((c) => (
@@ -239,7 +244,7 @@ export default async function ProfilePage({ params }: Props) {
           </section>
         )}
 
-        {contributions?.length === 0 && albums?.length === 0 && (
+        {!isOwner && contributions?.length === 0 && albums?.length === 0 && (
           <p className="text-muted text-sm text-center py-16">Nothing here yet.</p>
         )}
       </main>

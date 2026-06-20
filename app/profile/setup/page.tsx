@@ -394,6 +394,14 @@ export default function ProfileSetup() {
               className="border border-ink bg-ink text-paper px-7 py-3 text-xs tracking-[0.12em] uppercase hover:bg-ink/90 transition-colors disabled:opacity-50 self-start">
               {saving ? "Saving…" : form.handle ? "Save changes →" : "Create profile →"}
             </button>
+
+            <div className="border-t border-rule pt-6">
+              <p className="label mb-2">Your work</p>
+              <p className="text-sm text-muted mb-3">Add articles, mixes, interviews, and other pieces to your profile.</p>
+              <Link href="/profile/contributions" className="label underline underline-offset-2 hover:text-ink transition-colors">
+                Manage contributions →
+              </Link>
+            </div>
           </form>
         </div>
       </main>
