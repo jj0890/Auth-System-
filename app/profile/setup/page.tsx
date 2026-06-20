@@ -11,11 +11,20 @@ const ROLE_OPTIONS = [
 ];
 
 interface AlbumResult {
-  mb_id: string;
+  mb_id: string;   // stored as mb_id in DB
   title: string;
   artist: string;
   year: string;
   cover_url: string | null;
+}
+
+// Shape returned by /api/music/search
+interface MBResult {
+  id: string;
+  title: string;
+  artist: string;
+  year: string | null;
+  coverArtUrl: string | null;
 }
 
 interface AlbumSlot {
@@ -106,9 +115,15 @@ export default function ProfileSetup() {
     if (!q.trim()) { setResults([]); return; }
     setSearching(true);
     try {
-      const res = await fetch(`/api/music/search?q=${encodeURIComponent(q)}&limit=6`);
-      const data = await res.json();
-      setResults(data.results ?? []);
+      const res = await fetch(`/api/music/search?q=${encodeURIComponent(q)}`);
+      const raw: MBResult[] = await res.json();
+      setResults((raw ?? []).slice(0, 6).map((r) => ({
+        mb_id: r.id,
+        title: r.title,
+        artist: r.artist,
+        year: r.year ?? "",
+        cover_url: r.coverArtUrl,
+      })));
     } catch {
       setResults([]);
     } finally {
@@ -292,7 +307,7 @@ export default function ProfileSetup() {
                   <div key={slot.rank} className="flex flex-col gap-1">
                     {slot.album ? (
                       <div className="relative group">
-                        <div className="aspect-square bg-card border border-rule overflow-hidden">
+                        <div className="aspect-square bg-card border border-ink overflow-hidden">
                           {slot.album.cover_url
                             ? <img src={slot.album.cover_url} alt={slot.album.title} className="w-full h-full object-cover" />
                             : <div className="w-full h-full flex items-center justify-center">
@@ -308,7 +323,7 @@ export default function ProfileSetup() {
                       </div>
                     ) : (
                       <button type="button" onClick={() => openSlot(slot.rank)}
-                        className="aspect-square border border-dashed border-rule bg-paper hover:border-ink hover:bg-card transition-colors flex flex-col items-center justify-center gap-1">
+                        className="aspect-square border border-dashed border-ink/40 bg-paper hover:border-ink hover:bg-card transition-colors flex flex-col items-center justify-center gap-1">
                         <span className="text-muted text-xl leading-none">+</span>
                         <span className="label text-muted/60">{slot.rank}</span>
                       </button>
@@ -336,8 +351,8 @@ export default function ProfileSetup() {
                           <button type="button" onClick={() => pickAlbum(r)}
                             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-card transition-colors text-left">
                             {r.cover_url
-                              ? <img src={r.cover_url} alt={r.title} className="w-9 h-9 object-cover shrink-0 border border-rule" />
-                              : <div className="w-9 h-9 bg-card border border-rule shrink-0" />}
+                              ? <img src={r.cover_url} alt={r.title} className="w-12 h-12 object-cover shrink-0 border border-ink" />
+                              : <div className="w-12 h-12 bg-card border border-ink shrink-0 flex items-center justify-center"><span className="label text-muted/50">?</span></div>}
                             <div className="min-w-0">
                               <p className="text-sm font-medium truncate">{r.title}</p>
                               <p className="text-xs text-muted truncate">{r.artist}{r.year ? ` · ${r.year}` : ""}</p>

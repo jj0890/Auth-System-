@@ -156,7 +156,7 @@ export default async function ProfilePage({ params }: Props) {
               const album = albums?.find((a) => a.rank === rank);
               return album ? (
                 <div key={rank} className="group">
-                  <div className="aspect-square bg-card border border-rule overflow-hidden mb-2">
+                  <div className="aspect-square bg-card border border-ink overflow-hidden mb-2">
                     {album.cover_url ? (
                       <img
                         src={album.cover_url}
@@ -175,11 +175,11 @@ export default async function ProfilePage({ params }: Props) {
               ) : (
                 <div key={rank}>
                   {isOwner ? (
-                    <Link href="/profile/setup" className="block aspect-square border border-dashed border-rule hover:border-ink hover:bg-card transition-colors flex items-center justify-center mb-2">
+                    <Link href="/profile/setup" className="block aspect-square border border-dashed border-ink/40 hover:border-ink hover:bg-card transition-colors flex items-center justify-center mb-2">
                       <span className="label text-muted/50">+</span>
                     </Link>
                   ) : (
-                    <div className="aspect-square border border-dashed border-rule/50 mb-2" />
+                    <div className="aspect-square border border-dashed border-ink/20 mb-2" />
                   )}
                 </div>
               );
