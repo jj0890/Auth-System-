@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { getAdminClient, supabase } from "@/lib/supabase";
 import { checkApiLimit } from "@/lib/ratelimit";
 
@@ -51,7 +51,7 @@ export async function PATCH(req: Request) {
 
   // Whitelist only the fields users are allowed to update.
   // clerk_id, email, created_at are never user-editable.
-  const allowed = ["display_name", "handle", "role_label", "bio", "links", "is_public"] as const;
+  const allowed = ["display_name", "handle", "role_labels", "bio", "links", "is_public"] as const;
   const update: Record<string, unknown> = {};
 
   for (const key of allowed) {
@@ -97,10 +97,15 @@ export async function PATCH(req: Request) {
   }
 
   const admin = getAdminClient();
+
+  // Fetch email so we can upsert the row if it doesn't exist yet
+  // (webhook may not have fired for this user)
+  const user = await currentUser();
+  const email = user?.emailAddresses?.[0]?.emailAddress ?? "";
+
   const { data, error } = await admin
     .from("profiles")
-    .update(update)
-    .eq("clerk_id", userId)
+    .upsert({ clerk_id: userId, email, ...update }, { onConflict: "clerk_id" })
     .select()
     .single();
 

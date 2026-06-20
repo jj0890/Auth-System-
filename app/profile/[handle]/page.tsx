@@ -1,10 +1,11 @@
+import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 
 interface Props {
-  params: { handle: string };
+  params: Promise<{ handle: string }>;
 }
 
 const CONTENT_TYPE_COLORS: Record<string, string> = {
@@ -16,10 +17,11 @@ const CONTENT_TYPE_COLORS: Record<string, string> = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { handle } = await params;
   const { data } = await supabase
     .from("profiles")
     .select("display_name, bio, avatar_url")
-    .eq("handle", params.handle)
+    .eq("handle", handle)
     .eq("is_public", true)
     .single();
 
@@ -33,10 +35,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProfilePage({ params }: Props) {
+  const { handle } = await params;
+  const { userId } = await auth();
   const { data: profile } = await supabase
     .from("profiles")
     .select("*")
-    .eq("handle", params.handle)
+    .eq("handle", handle)
     .eq("is_public", true)
     .single();
 
@@ -69,9 +73,15 @@ export default async function ProfilePage({ params }: Props) {
         >
           The Edit
         </Link>
-        <Link href="/sign-in" className="label hover:text-ink transition-colors">
-          Sign in
-        </Link>
+        {userId && userId === profile.clerk_id ? (
+          <Link href="/profile/setup" className="label hover:text-ink transition-colors">
+            Edit profile
+          </Link>
+        ) : (
+          <Link href="/sign-in" className="label hover:text-ink transition-colors">
+            Sign in
+          </Link>
+        )}
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-12">
@@ -94,7 +104,9 @@ export default async function ProfilePage({ params }: Props) {
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <p className="label mb-1">{profile.role_label ?? "Contributor"}</p>
+            <p className="label mb-1">
+              {(profile.role_labels?.length ? profile.role_labels : ["Contributor"]).join(" · ")}
+            </p>
             <h1
               className="text-3xl font-normal mb-3"
               style={{ fontFamily: "var(--font-display)" }}

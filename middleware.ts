@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/profile/(.*)",      // Public profile pages are readable
+  "/api/(.*)",          // API routes handle their own auth checks
   "/api/music/(.*)",    // Album search is public (proxied, rate-limited)
   "/api/webhooks/(.*)", // Clerk webhooks must be public (verified by signature)
 ]);

@@ -7,19 +7,15 @@ const BUCKET = "avatars";
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const MIN_DIMENSION = 100;
 const MAX_DIMENSION = 6000;
-const OUTPUT_SIZE = 300;   // Final avatar px
-const THUMB_SIZE = 80;     // Thumbnail px
+const OUTPUT_SIZE = 300;
+const THUMB_SIZE = 80;
 
-// ── POST /api/profile/avatar ──────────────────────────────────────────────────
-// Accepts a multipart upload, validates, resizes, and places in the pending
-// folder. A moderator must approve before the public avatar URL updates.
 export async function POST(req: Request) {
   const { userId } = await auth();
   if (!userId) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Rate limit uploads: 5 per hour per user
   const { success } = await uploadRateLimit.limit(userId);
   if (!success) {
     return Response.json(
@@ -40,14 +36,12 @@ export async function POST(req: Request) {
     return Response.json({ error: "No file provided" }, { status: 400 });
   }
 
-  // ── 1. Server-side size check ─────────────────────────────────────────────
   if (file.size > MAX_FILE_SIZE) {
     return Response.json({ error: "File must be under 5 MB" }, { status: 422 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  // ── 2. Validate it's actually an image (sharp decodes the bytes) ──────────
   let metadata: sharp.Metadata;
   try {
     metadata = await sharp(buffer).metadata();
@@ -76,7 +70,6 @@ export async function POST(req: Request) {
     );
   }
 
-  // ── 3. Resize and convert to WebP ─────────────────────────────────────────
   const [resized, thumbnail] = await Promise.all([
     sharp(buffer)
       .resize(OUTPUT_SIZE, OUTPUT_SIZE, { fit: "cover", position: "centre" })
@@ -88,7 +81,6 @@ export async function POST(req: Request) {
       .toBuffer(),
   ]);
 
-  // ── 4. Upload to pending folder (not yet public) ───────────────────────────
   const supabase = getAdminClient();
   const timestamp = Date.now();
   const pendingPath = `pending/${userId}/avatar-${timestamp}.webp`;
@@ -108,7 +100,6 @@ export async function POST(req: Request) {
     return Response.json({ error: "Upload failed" }, { status: 500 });
   }
 
-  // ── 5. Log in the moderation queue ───────────────────────────────────────
   const { data: queueEntry, error: queueError } = await supabase
     .from("avatar_uploads")
     .insert({
@@ -121,7 +112,6 @@ export async function POST(req: Request) {
 
   if (queueError) {
     console.error("Failed to log avatar upload:", queueError);
-    // Non-fatal — don't block the user, but log it
   }
 
   return Response.json({
