@@ -52,6 +52,7 @@ export default function ProfileSetup() {
         const p = await profileRes.json();
         setForm({ display_name: p.display_name ?? "", handle: p.handle ?? "", bio: p.bio ?? "" });
         setRoleLabels(p.role_labels ?? []);
+        setIsPublic(p.is_public ?? true);
       }
       if (albumsRes.ok) {
         const a: any[] = await albumsRes.json();
@@ -68,6 +69,9 @@ export default function ProfileSetup() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
+  const [handleStatus, setHandleStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const handleCheckRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarStatus, setAvatarStatus] = useState<"idle" | "uploading" | "pending">("idle");
@@ -89,6 +93,17 @@ export default function ProfileSetup() {
     if (error) setError("");
   }
 
+  function checkHandle(handle: string) {
+    if (handleCheckRef.current) clearTimeout(handleCheckRef.current);
+    if (!handle || !/^[a-z0-9-]{2,30}$/.test(handle)) { setHandleStatus("idle"); return; }
+    setHandleStatus("checking");
+    handleCheckRef.current = setTimeout(async () => {
+      const res = await fetch(`/api/profile/check-handle?handle=${encodeURIComponent(handle)}`);
+      const { available } = await res.json();
+      setHandleStatus(available ? "available" : "taken");
+    }, 500);
+  }
+
   function toggleRole(role: string) {
     setRoleLabels((prev) => {
       if (prev.includes(role)) return prev.filter((r) => r !== role);
@@ -101,6 +116,7 @@ export default function ProfileSetup() {
     const slug = value.toLowerCase().trim()
       .replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").slice(0, 30);
     setForm((f) => ({ ...f, display_name: value, handle: slug }));
+    checkHandle(slug);
   }
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -189,6 +205,8 @@ export default function ProfileSetup() {
     if (!form.handle.trim()) return setError("Please enter a handle.");
     if (!/^[a-z0-9-]{2,30}$/.test(form.handle))
       return setError("Handle: lowercase letters, numbers, and hyphens only (2–30 chars).");
+    if (handleStatus === "taken")
+      return setError("That handle is already taken — please choose another.");
 
     setSaving(true);
     try {
@@ -198,7 +216,7 @@ export default function ProfileSetup() {
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, role_labels: roleLabels }),
+        body: JSON.stringify({ ...form, role_labels: roleLabels, is_public: isPublic }),
       });
       if (!res.ok) {
         const { error: msg } = await res.json().catch(() => ({}));
@@ -276,11 +294,19 @@ export default function ProfileSetup() {
               <div className="flex items-center border border-rule focus-within:border-ink transition-colors">
                 <span className="label px-4 py-3 border-r border-rule bg-card shrink-0">theedit.co/</span>
                 <input type="text" value={form.handle}
-                  onChange={(e) => setField("handle", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  onChange={(e) => { const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""); setField("handle", v); checkHandle(v); }}
                   placeholder="your-name" maxLength={30}
                   className="flex-1 bg-paper px-4 py-3 text-sm focus:outline-none" />
               </div>
-              <p className="label mt-1.5 text-muted/70">Lowercase letters, numbers, and hyphens only.</p>
+              <p className={`label mt-1.5 ${
+                handleStatus === "available" ? "text-green-600" :
+                handleStatus === "taken" ? "text-red-600" : "text-muted/70"
+              }`}>
+                {handleStatus === "checking" && "Checking…"}
+                {handleStatus === "available" && "✓ Available"}
+                {handleStatus === "taken" && "✗ Already taken"}
+                {handleStatus === "idle" && "Lowercase letters, numbers, and hyphens only."}
+              </p>
             </div>
 
             {/* Role */}
@@ -384,6 +410,23 @@ export default function ProfileSetup() {
                 maxLength={400} rows={4}
                 className="w-full border border-rule bg-paper px-4 py-3 text-sm focus:outline-none focus:border-ink transition-colors resize-none" />
               <p className="label text-right mt-1 text-muted/60">{form.bio.length}/400</p>
+            </div>
+
+            {/* Visibility */}
+            <div className="flex items-center justify-between border border-rule px-4 py-3">
+              <div>
+                <p className="label">Profile visibility</p>
+                <p className="label text-muted/70 mt-0.5">
+                  {isPublic ? "Public — visible in the contributor directory" : "Private — only you can see this profile"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPublic((v) => !v)}
+                className={`w-10 h-5 rounded-full transition-colors relative shrink-0 ${isPublic ? "bg-ink" : "bg-rule"}`}
+              >
+                <span className={`absolute top-0.5 w-4 h-4 bg-paper rounded-full shadow transition-transform ${isPublic ? "translate-x-5" : "translate-x-0.5"}`} />
+              </button>
             </div>
 
             {error && (
