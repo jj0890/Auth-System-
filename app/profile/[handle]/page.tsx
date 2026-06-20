@@ -45,6 +45,7 @@ export default async function ProfilePage({ params }: Props) {
     .single();
 
   if (!profile) notFound();
+  const isOwner = userId === (profile as any).clerk_id;
 
   const [{ data: albums }, { data: contributions }] = await Promise.all([
     supabase
@@ -137,21 +138,24 @@ export default async function ProfilePage({ params }: Props) {
           </div>
         </section>
 
-        {/* Top 5 Albums — Letterboxd-style horizontal strip */}
-        {albums && albums.length > 0 && (
-          <section className="mb-14">
-            <div className="flex items-baseline gap-4 mb-5">
-              <h2
-                className="text-xl font-normal"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
-                Taste
-              </h2>
-              <span className="label">Top 5 albums</span>
-            </div>
-            <div className="grid grid-cols-5 gap-2">
-              {albums.map((album) => (
-                <div key={album.id} className="group">
+        {/* Top 5 Albums — always visible */}
+        <section className="mb-14">
+          <div className="flex items-baseline gap-4 mb-5">
+            <h2 className="text-xl font-normal" style={{ fontFamily: "var(--font-display)" }}>
+              Taste
+            </h2>
+            <span className="label">Top 5 albums</span>
+            {isOwner && (
+              <Link href="/profile/setup" className="label text-muted underline underline-offset-2 hover:text-ink transition-colors ml-auto">
+                {albums && albums.length > 0 ? "Edit" : "Add albums"}
+              </Link>
+            )}
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {[1, 2, 3, 4, 5].map((rank) => {
+              const album = albums?.find((a) => a.rank === rank);
+              return album ? (
+                <div key={rank} className="group">
                   <div className="aspect-square bg-card border border-rule overflow-hidden mb-2">
                     {album.cover_url ? (
                       <img
@@ -168,10 +172,20 @@ export default async function ProfilePage({ params }: Props) {
                   <p className="text-[11px] font-medium leading-tight truncate">{album.title}</p>
                   <p className="text-[10px] text-muted truncate">{album.artist}</p>
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
+              ) : (
+                <div key={rank}>
+                  {isOwner ? (
+                    <Link href="/profile/setup" className="block aspect-square border border-dashed border-rule hover:border-ink hover:bg-card transition-colors flex items-center justify-center mb-2">
+                      <span className="label text-muted/50">+</span>
+                    </Link>
+                  ) : (
+                    <div className="aspect-square border border-dashed border-rule/50 mb-2" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         {/* Contributions — NTS-style grid */}
         {contributions && contributions.length > 0 && (
